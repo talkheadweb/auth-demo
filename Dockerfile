@@ -2,8 +2,12 @@ FROM node:22-alpine AS base
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
+ENV COREPACK_HOME="/pnpm/corepack"
 
-RUN corepack enable && corepack prepare pnpm@10.12.2 --activate
+RUN mkdir -p "$PNPM_HOME" "$COREPACK_HOME" \
+    && corepack enable \
+    && corepack prepare pnpm@10.12.2 --activate \
+    && chmod -R 755 "$PNPM_HOME"
 
 FROM base AS deps
 
@@ -27,8 +31,6 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV HOSTNAME=0.0.0.0
-ENV PORT=3000
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --prod --frozen-lockfile
@@ -39,6 +41,4 @@ COPY --from=builder --chown=node:node /app/next.config.ts ./next.config.ts
 
 USER node
 
-EXPOSE 3000
-
-CMD ["node", "node_modules/next/dist/bin/next", "start", "-H", "0.0.0.0", "-p", "3000"]
+CMD ["pnpm", "start"]
