@@ -16,15 +16,8 @@ FROM base AS builder
 
 WORKDIR /app
 
-ARG NEXT_PUBLIC_APP_NAME="Talkhead Auth Demo"
-ARG NEXT_PUBLIC_API_BASE_URL="http://localhost:9000/api/v1"
-ARG NEXT_PUBLIC_API_URL="http://localhost:9000"
-
-ENV NEXT_PUBLIC_APP_NAME="$NEXT_PUBLIC_APP_NAME"
-ENV NEXT_PUBLIC_API_BASE_URL="$NEXT_PUBLIC_API_BASE_URL"
-ENV NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL"
-
 COPY --from=deps /app/node_modules ./node_modules
+COPY .env ./.env
 COPY . .
 
 RUN pnpm build
@@ -48,4 +41,4 @@ USER node
 
 EXPOSE 3000
 
-CMD ["pnpm", "start"]
+CMD ["node", "node_modules/next/dist/bin/next", "start", "-H", "0.0.0.0", "-p", "3000"]
