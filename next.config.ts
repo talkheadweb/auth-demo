@@ -1,0 +1,12 @@
+import path from "path";
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
+  // rewrites() removed — /api/[...path]/route.ts is a proper proxy that
+  // forwards Set-Cookie and all other response headers rewrites() would drop.
+};
+
+export default nextConfig;
