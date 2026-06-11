@@ -7,55 +7,68 @@
     2. This handler calls POST /api/v1/auth/social/claim (server-side fetch).
     3. The backend sets httpOnly cookies in its response (same as regular login).
     4. This handler forwards those Set-Cookie headers verbatim in its own response.
-    5. Browser receives Set-Cookie from localhost:3000 → cookies stored for localhost.
-
-  Why forwarding works:
-    Express does not set a Domain attribute on cookies by default. A domainless
-    Set-Cookie header is always bound to the response origin by the browser. Since
-    the browser receives this response from localhost:3000 (not dev-api.talkhead.ai),
-    the cookies are stored for localhost:3000 — even though the backend generated them.
+    5. Browser receives Set-Cookie from the app domain → cookies stored correctly.
 */
 
 import { NextRequest, NextResponse } from "next/server";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
-export async function GET(request: NextRequest) {
-  const code  = request.nextUrl.searchParams.get("code");
-  const error = request.nextUrl.searchParams.get("error");
+/**
+ * Derives the public-facing origin from the incoming request.
+ *
+ * Behind a reverse proxy (Nginx, Caddy, etc.) `request.url` resolves to the
+ * internal address (http://localhost:3000). The proxy always forwards the real
+ * host and protocol via standard headers, so we read those instead.
+ *
+ *   x-forwarded-proto  →  https          (set by proxy)
+ *   x-forwarded-host   →  demo.talkhead.ai  (set by proxy)
+ *
+ * Falls back to the raw request origin for local dev (no proxy, no headers).
+ */
+function getOrigin(request: NextRequest): string {
+  const proto = request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
+  const host  = request.headers.get("x-forwarded-host")  ?? request.headers.get("host") ?? request.nextUrl.host;
+  return `${proto}://${host}`;
+}
 
-  const loginUrl = new URL("/login", request.url);
+export async function GET(request: NextRequest) {
+  const origin = getOrigin(request);
+  const code   = request.nextUrl.searchParams.get("code");
+  const error  = request.nextUrl.searchParams.get("error");
 
   if (error || !code) {
+    const loginUrl = new URL("/login", origin);
     loginUrl.searchParams.set("social_error", error ?? "Google authentication failed. Please try again.");
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(loginUrl.toString());
   }
 
-  // Exchange code for session — server-to-server (proxy rewrites don't apply here)
+  // Exchange code for session — server-to-server call (proxy rewrites don't apply here)
   let claimResponse: Response;
   try {
     claimResponse = await fetch(`${BACKEND_URL}/api/v1/auth/social/claim`, {
       method : "POST",
       headers: { "Content-Type": "application/json" },
       body   : JSON.stringify({ code }),
-      // Do not follow redirects automatically
       redirect: "manual",
     });
   } catch {
+    const loginUrl = new URL("/login", origin);
     loginUrl.searchParams.set("social_error", "Network error during authentication. Please try again.");
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(loginUrl.toString());
   }
 
   if (!claimResponse.ok) {
     const body = await claimResponse.json().catch(() => ({}));
     const msg  = (body as { message?: string }).message ?? "Authentication failed. Please try again.";
+    const loginUrl = new URL("/login", origin);
     loginUrl.searchParams.set("social_error", msg);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(loginUrl.toString());
   }
 
   // Forward the backend's Set-Cookie headers in our redirect response.
-  // The browser will bind them to localhost:3000 because that's who is responding.
-  const profileRedirect = NextResponse.redirect(new URL("/profile", request.url));
+  // The browser binds cookies to the domain that issued this response.
+  const profileRedirect = NextResponse.redirect(new URL("/profile", origin).toString());
 
   const setCookieHeaders = claimResponse.headers.getSetCookie?.() ?? [];
   for (const cookie of setCookieHeaders) {
