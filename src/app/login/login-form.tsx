@@ -8,7 +8,9 @@ import { PasswordInput } from "@/components/password-input";
 import { apiRequest, getErrorMessage } from "@/lib/api";
 import type { LoginResponse } from "@/types/auth";
 
-const GOOGLE_AUTH_URL = process.env.NEXT_PUBLIC_API_URL
+// Base URL without origin — origin appended at click-time so it always
+// reflects the actual domain (localhost in dev, live domain in production).
+const GOOGLE_AUTH_BASE = process.env.NEXT_PUBLIC_API_URL
   ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/social/google`
   : null;
 
@@ -52,10 +54,14 @@ export function LoginForm({ initialError }: { initialError?: string }) {
 
   return (
     <div className="space-y-5">
-      {GOOGLE_AUTH_URL ? (
+      {GOOGLE_AUTH_BASE ? (
         <>
           <a
-            href={GOOGLE_AUTH_URL}
+            href={GOOGLE_AUTH_BASE}
+            onClick={(e) => {
+              e.preventDefault();
+              window.location.href = `${GOOGLE_AUTH_BASE}?origin=${window.location.origin}`;
+            }}
             className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-slate-700/60 bg-slate-800/30 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-slate-800/60 hover:border-slate-600"
           >
             <GoogleIcon />
