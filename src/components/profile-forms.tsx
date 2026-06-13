@@ -113,7 +113,7 @@ export function ProfileForms({ user }: { user: User }) {
         <form onSubmit={handleProfileSubmit} className="space-y-4">
           {/* Avatar + picker */}
           <div className="flex items-center gap-4">
-            <UserAvatar src={previewUrl ?? user.profilePicture} name={user.name} size={56} />
+            <UserAvatar src={previewUrl ?? user.profilePictureKey} name={user.name} size={56} />
             <div className="flex-1 space-y-1">
               <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-lg border border-slate-700/60 bg-slate-800/30 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-slate-800/60">
                 {file ? "Change photo" : "Upload photo"}

@@ -12,7 +12,7 @@ export default async function ProfilePage() {
       {/* Header card */}
       <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-800 bg-slate-900/60 px-6 py-5">
         <div className="flex items-center gap-4 flex-1 min-w-0">
-          <UserAvatar src={user.profilePicture} name={user.name} size={48} />
+          <UserAvatar src={user.profilePictureKey} name={user.name} size={48} />
           <div className="min-w-0">
             <p className="truncate font-semibold text-slate-100">{user.name}</p>
             <p className="truncate text-sm text-slate-400">{user.email}</p>

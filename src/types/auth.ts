@@ -28,7 +28,7 @@ export type User = {
   role: UserRole;
   isVerified: boolean;
   isActive: boolean;
-  profilePicture: string | null;
+  profilePictureKey: string | null;
   createdAt: string;
   updatedAt: string;
 };
