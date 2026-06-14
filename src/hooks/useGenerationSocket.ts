@@ -5,15 +5,23 @@ import { io, Socket } from "socket.io-client";
 import { SocketEvent } from "@/lib/socket";
 import type { TGenerationUpdatePayload } from "@/lib/socket.types";
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:9000";
+const SOCKET_URL   = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:9000";
+const SESSION_PATH = "/api/v1/auth/me"; // proxied → triggers authenticate middleware → refreshes access_token cookie
 
-// How many consecutive auth failures before we give up and show the session-
-// expired modal. Non-auth errors (network, CORS) are handled by socket.io's
-// built-in reconnection and do not count toward this limit.
+// How many consecutive auth failures (after HTTP refresh attempt) before giving up.
 const AUTH_FAIL_THRESHOLD = 3;
 
 const isAuthError = (msg: string) =>
   /expired|authentication required|invalid.*token/i.test(msg);
+
+// Attempt an HTTP session refresh through the Next.js proxy.
+// The authenticate middleware will issue a new Set-Cookie: access_token if
+// the refresh_token cookie is still valid, so the next socket connect
+// attempt can use the fresh token without touching Redis directly.
+const refreshSessionViaHttp = (): Promise<boolean> =>
+  fetch(SESSION_PATH, { credentials: "include", cache: "no-store" })
+    .then(r => r.ok)
+    .catch(() => false);
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
@@ -28,10 +36,15 @@ export type UseGenerationSocketResult = {
 /**
  * Manages a Socket.io connection for the logged-in user.
  *
- * Auth errors are counted separately from network errors. After
- * AUTH_FAIL_THRESHOLD consecutive auth failures the socket stops retrying and
- * sets sessionExpired=true so the UI can prompt the user to log in again.
- * Calling reconnect() resets the counter and tries again.
+ * Auth error recovery flow:
+ *   1. connect_error with auth message detected
+ *   2. Fire GET /api/v1/auth/me through the proxy — authenticate middleware
+ *      issues a new access_token Set-Cookie if the refresh_token is still valid
+ *   3. If HTTP refresh succeeds → reconnect socket (now has fresh access_token)
+ *   4. If HTTP refresh also fails → increment failure counter
+ *   5. After AUTH_FAIL_THRESHOLD consecutive HTTP refresh failures → sessionExpired
+ *
+ * Non-auth errors (network, CORS) are left to socket.io's built-in reconnection.
  */
 export const useGenerationSocket = (
   enabled: boolean = true,
@@ -52,8 +65,7 @@ export const useGenerationSocket = (
   const connect = () => {
     if (!mountedRef.current) return;
 
-    // Reset auth failure counter and clear session-expired state on every
-    // (re)connect attempt — including manual reconnect button presses.
+    // Reset on every (re)connect, including manual reconnect button presses.
     authFailRef.current = 0;
     setSessionExpired(false);
 
@@ -68,8 +80,6 @@ export const useGenerationSocket = (
       withCredentials: true,
       autoConnect    : false,
       transports     : ["websocket", "polling"],
-      // Built-in reconnection handles transient network drops.
-      // Auth errors are handled separately — see connect_error below.
       reconnection         : true,
       reconnectionDelay    : 2_000,
       reconnectionDelayMax : 10_000,
@@ -80,7 +90,7 @@ export const useGenerationSocket = (
 
     socket.on("connect", () => {
       if (!mountedRef.current) return;
-      authFailRef.current = 0; // reset on successful connect
+      authFailRef.current = 0;
       console.info("[socket] connected — id:", socket.id);
       setStatus("connected");
       pingRef.current = setInterval(() => socket.emit(SocketEvent.PING), 25_000);
@@ -96,32 +106,44 @@ export const useGenerationSocket = (
     socket.on("connect_error", (err) => {
       clearPing();
       console.error("[socket] connect_error:", err.message);
-
       if (!mountedRef.current) return;
 
-      if (isAuthError(err.message)) {
-        authFailRef.current += 1;
-        console.warn(
-          `[socket] auth failure ${authFailRef.current}/${AUTH_FAIL_THRESHOLD}:`,
-          err.message,
-        );
-
-        if (authFailRef.current >= AUTH_FAIL_THRESHOLD) {
-          // Session is definitively expired — stop retrying and tell the UI.
-          console.error("[socket] giving up after repeated auth failures");
-          socket.disconnect();
-          setSessionExpired(true);
-          setStatus("error");
-          return;
-        }
-
-        // Still under threshold — let built-in reconnection retry.
+      if (!isAuthError(err.message)) {
+        // Non-auth error (network, CORS) — socket.io built-in retry handles it.
         setStatus("error");
         return;
       }
 
-      // Non-auth error (network, CORS, etc.) — built-in reconnection handles it.
-      setStatus("error");
+      // Auth error: the socket has no way to refresh its own cookies.
+      // Fire an HTTP request through the Next.js proxy — the authenticate
+      // middleware will issue a new access_token Set-Cookie using the
+      // refresh_token, so the next socket connect attempt succeeds cleanly.
+      console.warn("[socket] auth error — attempting HTTP session refresh before retry");
+      setStatus("connecting");
+
+      refreshSessionViaHttp().then(ok => {
+        if (!mountedRef.current) return;
+
+        if (ok) {
+          // Session refreshed — create a fresh socket with the new cookie.
+          console.info("[socket] session refreshed via HTTP — reconnecting socket");
+          connect(); // resets authFailRef.current to 0 internally
+          return;
+        }
+
+        // HTTP refresh also failed — genuine session expiry or Redis issue.
+        authFailRef.current += 1;
+        console.warn(
+          `[socket] HTTP refresh failed — auth failure ${authFailRef.current}/${AUTH_FAIL_THRESHOLD}`,
+        );
+        setStatus("error");
+
+        if (authFailRef.current >= AUTH_FAIL_THRESHOLD) {
+          console.error("[socket] giving up after repeated auth + HTTP refresh failures");
+          socket.disconnect();
+          setSessionExpired(true);
+        }
+      });
     });
 
     socket.on(SocketEvent.GENERATION_UPDATE, (payload: TGenerationUpdatePayload) => {
