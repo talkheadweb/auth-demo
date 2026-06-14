@@ -14,12 +14,40 @@ const STATUS_CONFIG = {
   error       : { dot: "bg-red-500",     text: "text-red-400",    label: "Error"         },
 } as const;
 
-function SocketBadge({ status }: { status: keyof typeof STATUS_CONFIG }) {
+function SocketBadge({
+  status,
+  onReconnect,
+}: {
+  status     : keyof typeof STATUS_CONFIG;
+  onReconnect: () => void;
+}) {
   const cfg = STATUS_CONFIG[status];
+  const canReconnect = status === "disconnected" || status === "error";
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-1.5">
+    <div className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-1.5">
       <span className={`h-2 w-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
       <span className={`text-xs font-medium ${cfg.text}`}>Socket: {cfg.label}</span>
+      <button
+        type="button"
+        onClick={onReconnect}
+        title="Reconnect socket"
+        className={`ml-1 rounded p-0.5 transition ${
+          canReconnect
+            ? "text-slate-400 hover:text-slate-100 hover:bg-slate-700/60"
+            : "text-slate-700 cursor-default"
+        }`}
+      >
+        {/* Refresh / reconnect icon */}
+        <svg
+          className={`h-3.5 w-3.5 ${status === "connecting" ? "animate-spin" : ""}`}
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
+          strokeLinecap="round" strokeLinejoin="round"
+        >
+          <path d="M23 4v6h-6" />
+          <path d="M1 20v-6h6" />
+          <path d="M3.51 9a9 9 0 0114.13-3.36L23 10M1 14l5.36 4.36A9 9 0 0020.49 15" />
+        </svg>
+      </button>
     </div>
   );
 }
@@ -105,7 +133,7 @@ function ResultCard({ gen }: { gen: Generation }) {
 const inputCls = "w-full rounded-xl border border-slate-700/60 bg-slate-800/50 px-3.5 py-2.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/15";
 
 export function PlaygroundPanel() {
-  const { status: socketStatus, lastUpdate, clearLastUpdate } = useSocketContext();
+  const { status: socketStatus, lastUpdate, clearLastUpdate, reconnect } = useSocketContext();
 
   // Form state
   const [inputType,     setInputType]     = useState<"text" | "audio">("text");
@@ -115,6 +143,7 @@ export function PlaygroundPanel() {
   const [avatarUrl,     setAvatarUrl]     = useState("");
   const [inputText,     setInputText]     = useState("");
   const [audioFile,     setAudioFile]     = useState<File | null>(null);
+  const [testMode,      setTestMode]      = useState(false);
   const [submitting,    setSubmitting]    = useState(false);
   const [formError,     setFormError]     = useState<string | null>(null);
 
@@ -184,7 +213,8 @@ export function PlaygroundPanel() {
         fd.append("inputAudio", audioFile);
       }
 
-      const gen = await apiRequest<Generation>("/generations", { method: "POST", body: fd });
+      const url = testMode ? "/generations?mode=test" : "/generations";
+      const gen = await apiRequest<Generation>(url, { method: "POST", body: fd });
       setActiveGen(gen);
 
       // Poll as fallback — socket will stop it early if connected
@@ -207,7 +237,7 @@ export function PlaygroundPanel() {
           <h1 className="text-xl font-semibold text-slate-100">Generation Playground</h1>
           <p className="mt-0.5 text-sm text-slate-500">Submit a generation job and receive the result in real-time via socket.</p>
         </div>
-        <SocketBadge status={socketStatus} />
+        <SocketBadge status={socketStatus} onReconnect={reconnect} />
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
@@ -297,6 +327,29 @@ export function PlaygroundPanel() {
             )}
 
             {formError && <StatusMessage kind="error" message={formError} />}
+
+            {/* Test mode toggle */}
+            <button
+              type="button"
+              onClick={() => setTestMode(p => !p)}
+              className={`w-full flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5 transition ${
+                testMode
+                  ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                  : "border-slate-700/60 bg-slate-800/30 text-slate-500 hover:text-slate-300 hover:border-slate-600"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <svg className="h-4 w-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/>
+                </svg>
+                <span className="text-xs font-medium">Test mode</span>
+                {testMode && <span className="text-xs opacity-70">— skips external API, uses dummy output</span>}
+              </div>
+              {/* Toggle pill */}
+              <div className={`relative flex-shrink-0 h-5 w-9 rounded-full transition-colors ${testMode ? "bg-amber-500" : "bg-slate-700"}`}>
+                <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${testMode ? "translate-x-4" : "translate-x-0"}`} />
+              </div>
+            </button>
 
             <button
               type="submit"

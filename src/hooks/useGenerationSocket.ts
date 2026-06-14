@@ -13,6 +13,7 @@ export type UseGenerationSocketResult = {
   status         : ConnectionStatus;
   lastUpdate     : TGenerationUpdatePayload | null;
   clearLastUpdate: () => void;
+  reconnect      : () => void;
 };
 
 /**
@@ -124,5 +125,6 @@ export const useGenerationSocket = (
     status,
     lastUpdate,
     clearLastUpdate: () => setLastUpdate(null),
+    reconnect      : connect,
   };
 };

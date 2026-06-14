@@ -7,6 +7,7 @@ const SocketContext = createContext<UseGenerationSocketResult>({
   status         : "disconnected",
   lastUpdate     : null,
   clearLastUpdate: () => {},
+  reconnect      : () => {},
 });
 
 export function SocketProvider({ children }: { children: ReactNode }) {
