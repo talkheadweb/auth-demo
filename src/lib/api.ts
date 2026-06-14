@@ -1,4 +1,16 @@
-import type { ApiErrorResponse, ApiResponse } from "@/types/auth";
+import type { ApiErrorResponse, ApiResponse, ApiSuccessResponse } from "@/types/auth";
+
+export type ApiMeta = {
+  page      : number;
+  limit     : number;
+  total     : number;
+  totalPages: number;
+};
+
+export type ApiListResult<T> = {
+  data: T[];
+  meta: ApiMeta;
+};
 
 export class ApiError extends Error {
   status: number;
@@ -66,6 +78,36 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
   }
 
   return payload.data as T;
+}
+
+export async function apiRequestList<T>(path: string, init: RequestInit = {}): Promise<ApiListResult<T>> {
+  const response = await fetch(joinUrl(path), {
+    ...init,
+    cache: "no-store",
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+      ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+      ...(init.headers ?? {}),
+    },
+  });
+
+  const payload = await parseApiResponse<T[]>(response);
+
+  if (!response.ok || !payload.success) {
+    const errorPayload = payload as ApiErrorResponse;
+    throw new ApiError(
+      errorPayload.message || "Request failed.",
+      errorPayload.statusCode || response.status,
+      errorPayload.errorMessages?.map((item) => item.message) ?? [],
+    );
+  }
+
+  const ok = payload as ApiSuccessResponse<T[]> & { meta?: ApiMeta };
+  return {
+    data: ok.data ?? [],
+    meta: ok.meta ?? { page: 1, limit: 10, total: 0, totalPages: 0 },
+  };
 }
 
 export function getErrorMessage(error: unknown) {

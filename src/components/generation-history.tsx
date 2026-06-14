@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { apiRequest, getErrorMessage } from "@/lib/api";
-import type { Generation, GenerationListResponse } from "@/types/generation";
+import { apiRequestList, getErrorMessage } from "@/lib/api";
+import type { Generation } from "@/types/generation";
 
 // ── Status badge ───────────────────────────────────────────────────────────
 const STATUS_STYLE: Record<string, string> = {
@@ -117,13 +117,13 @@ export function GenerationHistory() {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiRequest<GenerationListResponse>(
+      const { data, meta } = await apiRequestList<Generation>(
         `/generations?page=${p}&limit=10&sortBy=createdAt&sortOrder=desc`,
       );
-      setGenerations(data.items);
-      setPage(data.meta.page);
-      setTotalPages(data.meta.totalPages);
-      setTotal(data.meta.total);
+      setGenerations(data);
+      setPage(meta.page);
+      setTotalPages(meta.totalPages);
+      setTotal(meta.total);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {

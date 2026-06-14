@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react"; // useEffect kept for pollGeneration cleanup
 import { apiRequest, getErrorMessage } from "@/lib/api";
-import { useGenerationSocket } from "@/hooks/useGenerationSocket";
+import { useSocketContext } from "@/context/socket-context";
 import { StatusMessage } from "@/components/status-message";
 import type { Generation } from "@/types/generation";
 
@@ -105,7 +105,7 @@ function ResultCard({ gen }: { gen: Generation }) {
 const inputCls = "w-full rounded-xl border border-slate-700/60 bg-slate-800/50 px-3.5 py-2.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/15";
 
 export function PlaygroundPanel() {
-  const { status: socketStatus, lastUpdate, clearLastUpdate } = useGenerationSocket(true);
+  const { status: socketStatus, lastUpdate, clearLastUpdate } = useSocketContext();
 
   // Form state
   const [inputType,     setInputType]     = useState<"text" | "audio">("text");
