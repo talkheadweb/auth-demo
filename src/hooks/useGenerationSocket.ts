@@ -47,9 +47,12 @@ export const useGenerationSocket = (
       socketRef.current.disconnect();
     }
 
+    console.debug("[socket] connecting to", SOCKET_URL);
+
     const socket = io(SOCKET_URL, {
-      // No auth.token — cookies are sent automatically by the browser on the
-      // handshake HTTP upgrade request (same as any credentialed fetch).
+      // Cookies are sent automatically by the browser on the handshake HTTP
+      // upgrade request. Requires AUTH_COOKIE_SAMESITE=none + AUTH_COOKIE_SECURE=true
+      // on the backend when the frontend and API are on different origins.
       withCredentials: true,
       autoConnect    : false,
       transports     : ["websocket", "polling"],
@@ -63,6 +66,7 @@ export const useGenerationSocket = (
 
     socket.on("connect", () => {
       if (!mountedRef.current) return;
+      console.info("[socket] connected — id:", socket.id);
       setStatus("connected");
       // Keepalive ping every 25 s — prevents proxy/load-balancer idle timeouts
       pingRef.current = setInterval(() => socket.emit(SocketEvent.PING), 25_000);
@@ -70,21 +74,29 @@ export const useGenerationSocket = (
 
     socket.on("disconnect", (reason) => {
       clearPing();
+      console.warn("[socket] disconnected — reason:", reason);
       if (!mountedRef.current) return;
       setStatus("disconnected");
-      // Built-in reconnection handles transport errors.
-      // Only manual disconnects ("io client disconnect") are final.
-      if (reason === "io client disconnect") setStatus("disconnected");
     });
 
-    socket.on("connect_error", () => {
+    socket.on("connect_error", (err) => {
       clearPing();
+      console.error("[socket] connect_error:", err.message,
+        "\n  Hint: if message is \"Authentication required\" the backend may not be",
+        "receiving cookies. Ensure AUTH_COOKIE_SAMESITE=none + AUTH_COOKIE_SECURE=true",
+        "on the backend and that the socket URL is correct:", SOCKET_URL,
+      );
       if (mountedRef.current) setStatus("error");
       // socket.io built-in reconnection will retry automatically
     });
 
     socket.on(SocketEvent.GENERATION_UPDATE, (payload: TGenerationUpdatePayload) => {
+      console.debug("[socket] generation:update", payload);
       if (mountedRef.current) setLastUpdate(payload);
+    });
+
+    socket.on(SocketEvent.PONG, () => {
+      console.debug("[socket] pong received");
     });
 
     setStatus("connecting");
