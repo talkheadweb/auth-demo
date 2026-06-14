@@ -29,6 +29,7 @@ export type User = {
   isVerified: boolean;
   isActive: boolean;
   profilePictureKey: string | null;
+  profilePictureUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 };

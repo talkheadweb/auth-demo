@@ -9,6 +9,8 @@ const flows = [
   "Protected profile page",
   "Profile update & password change",
   "Google OAuth (social login)",
+  "Generation playground with real-time socket updates",
+  "Generation history with paginated list",
 ];
 
 export default async function Home() {
@@ -17,9 +19,9 @@ export default async function Home() {
   return (
     <div className="w-full max-w-3xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-50">Auth demo</h1>
+        <h1 className="text-2xl font-semibold text-slate-50">Talkhead Demo</h1>
         <p className="mt-2 text-sm text-slate-400">
-          Full auth flow wired to the Talkhead Express backend — cookies, JWT, email verification, OAuth.
+          Auth, generation playground, and history — wired to the Talkhead Express backend with real-time socket updates.
         </p>
       </div>
 
@@ -36,11 +38,14 @@ export default async function Home() {
             ))}
           </ul>
           <div className="flex flex-wrap gap-2.5 pt-1">
-            <Link href="/register" className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-400">
-              Create account
+            <Link href="/playground" className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-400">
+              Open Playground
             </Link>
-            <Link href="/login" className="rounded-xl border border-slate-700/60 bg-slate-800/30 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-800/60">
-              Sign in
+            <Link href="/history" className="rounded-xl border border-slate-700/60 bg-slate-800/30 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-800/60">
+              History
+            </Link>
+            <Link href="/register" className="rounded-xl border border-slate-700/60 bg-slate-800/30 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-800/60">
+              Create account
             </Link>
           </div>
         </div>

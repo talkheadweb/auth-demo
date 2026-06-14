@@ -41,6 +41,8 @@ export function NavLinks({ user }: NavLinksProps) {
 
       {user ? (
         <>
+          {link("/playground", "Playground")}
+          {link("/history", "History")}
           {link("/profile", "Profile")}
           <button
             type="button"
