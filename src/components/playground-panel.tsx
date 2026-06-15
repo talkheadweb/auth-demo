@@ -138,9 +138,9 @@ export function PlaygroundPanel() {
   // Form state
   const [inputType,     setInputType]     = useState<"text" | "audio">("text");
   const [voiceId,       setVoiceId]       = useState("");
-  const [avatarMode,    setAvatarMode]    = useState<"file" | "url">("file");
+  const [avatarMode,    setAvatarMode]    = useState<"file" | "key">("file");
   const [avatarFile,    setAvatarFile]    = useState<File | null>(null);
-  const [avatarUrl,     setAvatarUrl]     = useState("");
+  const [avatarKey,     setAvatarKey]     = useState("");
   const [inputText,     setInputText]     = useState("");
   const [audioFile,     setAudioFile]     = useState<File | null>(null);
   const [testMode,      setTestMode]      = useState(false);
@@ -202,8 +202,8 @@ export function PlaygroundPanel() {
       fd.append("voiceId",   voiceId);
 
       if (avatarMode === "file" && avatarFile) fd.append("avatarImage", avatarFile);
-      else if (avatarMode === "url" && avatarUrl.trim()) fd.append("avatarImageUrl", avatarUrl.trim());
-      else { setFormError("Provide an avatar image file or URL."); setSubmitting(false); return; }
+      else if (avatarMode === "key" && avatarKey.trim()) fd.append("avatarImageKey", avatarKey.trim());
+      else { setFormError("Provide an avatar image file or select an avatar key."); setSubmitting(false); return; }
 
       if (inputType === "text") {
         if (!inputText.trim()) { setFormError("Input text is required."); setSubmitting(false); return; }
@@ -269,7 +269,7 @@ export function PlaygroundPanel() {
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-slate-300">Avatar image</label>
               <div className="flex gap-2 mb-2">
-                {(["file", "url"] as const).map(m => (
+                {(["file", "key"] as const).map(m => (
                   <button
                     key={m}
                     type="button"
@@ -278,7 +278,7 @@ export function PlaygroundPanel() {
                       avatarMode === m ? "bg-slate-700 text-slate-100" : "text-slate-500 hover:text-slate-300"
                     }`}
                   >
-                    {m === "file" ? "Upload file" : "Enter URL"}
+                    {m === "file" ? "Upload file" : "Avatar key"}
                   </button>
                 ))}
               </div>
@@ -291,11 +291,11 @@ export function PlaygroundPanel() {
                 />
               ) : (
                 <input
-                  type="url"
+                  type="text"
                   className={inputCls}
-                  value={avatarUrl}
-                  onChange={e => setAvatarUrl(e.target.value)}
-                  placeholder="https://example.com/avatar.jpg"
+                  value={avatarKey}
+                  onChange={e => setAvatarKey(e.target.value)}
+                  placeholder="avatar-images/uuid.webp"
                 />
               )}
             </div>
