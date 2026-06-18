@@ -24,7 +24,7 @@ export class ApiError extends Error {
   }
 }
 
-const CLIENT_BASE = "/api/v1";
+const CLIENT_BASE = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:9000"}/api/v1`;
 
 const joinUrl = (path: string) => {
   const suffix = path.startsWith("/") ? path : `/${path}`;

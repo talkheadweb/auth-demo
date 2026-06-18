@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { getSessionInfo, isLoggedIn, type SessionInfo } from "@/lib/session";
+import { apiRequest } from "@/lib/api";
 import type { User } from "@/types/auth";
 
 type AuthState = {
@@ -40,22 +41,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const res = await fetch("/api/v1/auth/me", { credentials: "include" });
-
-      if (res.status === 401) {
-        // Session expired or revoked — clear state and redirect.
+      const user = await apiRequest<User>("/auth/me");
+      setUser(user);
+    } catch (err: unknown) {
+      const status = (err as { status?: number })?.status;
+      if (status === 401) {
         setUser(null);
         router.replace("/login");
         return;
       }
-
-      if (res.ok) {
-        const data = await res.json();
-        setUser(data.data ?? null);
-      } else {
-        setUser(null);
-      }
-    } catch {
       setUser(null);
     } finally {
       setLoading(false);

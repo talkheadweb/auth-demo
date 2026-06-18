@@ -6,7 +6,7 @@ import { SocketEvent } from "@/lib/socket";
 import type { TGenerationUpdatePayload } from "@/lib/socket.types";
 
 const SOCKET_URL   = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:9000";
-const SESSION_PATH = "/api/v1/auth/me"; // proxied → triggers authenticate middleware → refreshes access_token cookie
+const SESSION_PATH = `${SOCKET_URL}/api/v1/auth/me`;
 
 // How many consecutive auth failures (after HTTP refresh attempt) before giving up.
 const AUTH_FAIL_THRESHOLD = 3;
@@ -14,10 +14,8 @@ const AUTH_FAIL_THRESHOLD = 3;
 const isAuthError = (msg: string) =>
   /expired|authentication required|invalid.*token/i.test(msg);
 
-// Attempt an HTTP session refresh through the Next.js proxy.
-// The authenticate middleware will issue a new Set-Cookie: access_token if
-// the refresh_token cookie is still valid, so the next socket connect
-// attempt can use the fresh token without touching Redis directly.
+// Attempt an HTTP session refresh — authenticate middleware issues a new
+// access_token cookie if the refresh_token is still valid.
 const refreshSessionViaHttp = (): Promise<boolean> =>
   fetch(SESSION_PATH, { credentials: "include", cache: "no-store" })
     .then(r => r.ok)
@@ -38,7 +36,7 @@ export type UseGenerationSocketResult = {
  *
  * Auth error recovery flow:
  *   1. connect_error with auth message detected
- *   2. Fire GET /api/v1/auth/me through the proxy — authenticate middleware
+ *   2. Fire GET /api/v1/auth/me directly to backend — authenticate middleware
  *      issues a new access_token Set-Cookie if the refresh_token is still valid
  *   3. If HTTP refresh succeeds → reconnect socket (now has fresh access_token)
  *   4. If HTTP refresh also fails → increment failure counter
@@ -115,9 +113,9 @@ export const useGenerationSocket = (
       }
 
       // Auth error: the socket has no way to refresh its own cookies.
-      // Fire an HTTP request through the Next.js proxy — the authenticate
-      // middleware will issue a new access_token Set-Cookie using the
-      // refresh_token, so the next socket connect attempt succeeds cleanly.
+      // Fire an HTTP request directly to the backend — authenticate middleware
+      // issues a new access_token Set-Cookie using the refresh_token,
+      // so the next socket connect attempt succeeds cleanly.
       console.warn("[socket] auth error — attempting HTTP session refresh before retry");
       setStatus("connecting");
 

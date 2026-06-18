@@ -2,11 +2,9 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 import { StatusMessage } from "@/components/status-message";
 import { PasswordInput } from "@/components/password-input";
 import { apiRequest, getErrorMessage } from "@/lib/api";
-import { useAuth } from "@/context/auth-context";
 import type { LoginResponse } from "@/types/auth";
 
 // Base URL without origin — origin appended at click-time so it always
@@ -29,8 +27,6 @@ function GoogleIcon() {
 const inputCls = "w-full rounded-xl border border-slate-700/60 bg-slate-800/50 px-3.5 py-2.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/15";
 
 export function LoginForm({ initialError }: { initialError?: string }) {
-  const router = useRouter();
-  const { refresh } = useAuth();
   const [email, setEmail]           = useState("");
   const [password, setPassword]     = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,11 +41,9 @@ export function LoginForm({ initialError }: { initialError?: string }) {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
-      // Refresh AuthContext so nav links update, then navigate.
-      // Do NOT call router.refresh() here — it races with router.push and
-      // can cancel the navigation or trigger a redirect loop.
-      await refresh();
-      router.push("/profile");
+      // Hard navigation ensures the browser sends fresh cookies on the next
+      // request and all server components re-render from scratch.
+      window.location.href = "/profile";
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {

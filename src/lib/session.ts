@@ -1,8 +1,5 @@
 "use client";
 
-const _suffix = process.env.NODE_ENV === "production" ? "" : "_dev";
-const COOKIE_NAME = `session_info${_suffix}`;
-
 export type SessionInfo = {
   uid              : string;
   name             : string;
@@ -12,18 +9,16 @@ export type SessionInfo = {
 };
 
 /**
- * Reads the JS-readable session_info cookie synchronously.
- * Returns null when the user is logged out or the cookie has expired.
- *
- * This never makes a network call — use it as a fast first check before
- * validating with /auth/me.
+ * Reads the JS-readable session_info cookie set by the backend.
+ * The frontend does not need to know the exact cookie name — it finds any
+ * cookie whose name starts with "session_info" (backend owns the naming).
  */
 export function getSessionInfo(): SessionInfo | null {
-  if (typeof document === "undefined") return null; // SSR guard
+  if (typeof document === "undefined") return null;
 
   const match = document.cookie
     .split("; ")
-    .find(row => row.startsWith(`${COOKIE_NAME}=`));
+    .find(row => row.startsWith("session_info"));
 
   if (!match) return null;
 
