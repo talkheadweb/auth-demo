@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { StatusMessage } from "@/components/status-message";
 import { PasswordInput } from "@/components/password-input";
 import { apiRequest, getErrorMessage } from "@/lib/api";
+import { useAuth } from "@/context/auth-context";
 import type { LoginResponse } from "@/types/auth";
 
 // Base URL without origin — origin appended at click-time so it always
@@ -29,6 +30,7 @@ const inputCls = "w-full rounded-xl border border-slate-700/60 bg-slate-800/50 p
 
 export function LoginForm({ initialError }: { initialError?: string }) {
   const router = useRouter();
+  const { refresh } = useAuth();
   const [email, setEmail]           = useState("");
   const [password, setPassword]     = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,8 +45,11 @@ export function LoginForm({ initialError }: { initialError?: string }) {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
+      // Refresh AuthContext so nav links update, then navigate.
+      // Do NOT call router.refresh() here — it races with router.push and
+      // can cancel the navigation or trigger a redirect loop.
+      await refresh();
       router.push("/profile");
-      router.refresh();
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
