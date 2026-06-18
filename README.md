@@ -9,7 +9,7 @@ cp .env.example .env.local
 pnpm install
 pnpm dev
 ```
-
+ 
 Frontend: `http://localhost:3000`  
 Backend API base: `http://localhost:9000/api/v1`
 
