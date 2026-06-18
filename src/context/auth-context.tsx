@@ -45,12 +45,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(user);
     } catch (err: unknown) {
       const status = (err as { status?: number })?.status;
-      if (status === 401) {
-        setUser(null);
+      setUser(null);
+      // Only redirect to login if the session is invalid AND we are not already
+      // on the login page. Redirecting when already there creates an infinite
+      // reload loop (e.g. stale cookies from a previous environment).
+      if (status === 401 && typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
         router.replace("/login");
         return;
       }
-      setUser(null);
     } finally {
       setLoading(false);
     }

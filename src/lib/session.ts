@@ -8,17 +8,18 @@ export type SessionInfo = {
   profilePictureKey: string | null;
 };
 
-/**
- * Reads the JS-readable session_info cookie set by the backend.
- * The frontend does not need to know the exact cookie name — it finds any
- * cookie whose name starts with "session_info" (backend owns the naming).
- */
+// Exact cookie name derived from NODE_ENV — matches the backend's naming logic.
+// Using exact match (with "=") prevents "session_info_dev" matching in production
+// and vice versa, which avoids a redirect loop when switching between environments.
+const _suffix    = process.env.NODE_ENV === "production" ? "" : "_dev";
+const COOKIE_KEY = `session_info${_suffix}=`;
+
 export function getSessionInfo(): SessionInfo | null {
   if (typeof document === "undefined") return null;
 
   const match = document.cookie
     .split("; ")
-    .find(row => row.startsWith("session_info"));
+    .find(row => row.startsWith(COOKIE_KEY));
 
   if (!match) return null;
 
