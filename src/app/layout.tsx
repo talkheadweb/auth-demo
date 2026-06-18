@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { Suspense } from "react";
 import { NavWrapper } from "@/components/nav-wrapper";
+import { AuthProvider } from "@/context/auth-context";
 import { SocketProvider } from "@/context/socket-context";
 import "./globals.css";
 
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body suppressHydrationWarning>
+        <AuthProvider>
         <SocketProvider>
         <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 py-6">
           <header className="flex items-center justify-between border-b border-slate-800 pb-5">
@@ -38,6 +40,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           </main>
         </div>
         </SocketProvider>
+        </AuthProvider>
       </body>
     </html>
   );

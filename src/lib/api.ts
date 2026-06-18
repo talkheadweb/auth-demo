@@ -66,6 +66,13 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     },
   });
 
+  // Global 401 handler — session expired or revoked mid-session.
+  // Redirect to login so the user re-authenticates.
+  if (response.status === 401 && typeof window !== "undefined") {
+    window.location.href = "/login";
+    throw new ApiError("Session expired. Redirecting to login.", 401);
+  }
+
   const payload = await parseApiResponse<T>(response);
 
   if (!response.ok || !payload.success) {
