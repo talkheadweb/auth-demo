@@ -25,10 +25,11 @@ export default function RegisterPage() {
     setError("");
     setSuccess("");
     try {
-      await apiRequest<void>("/auth/register", {
-        method: "POST",
-        body: JSON.stringify({ name, email, password }),
-      });
+      await apiRequest<void>(
+        "/auth/register",
+        { method: "POST", body: JSON.stringify({ name, email, password }) },
+        { skipAuthRedirect: true },
+      );
       setSuccess("Account created. Check your email for the verification link.");
       setPassword("");
       setConfirmPassword("");

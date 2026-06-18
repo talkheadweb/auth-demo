@@ -37,10 +37,11 @@ export function LoginForm({ initialError }: { initialError?: string }) {
     setIsSubmitting(true);
     setError("");
     try {
-      await apiRequest<LoginResponse>("/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-      });
+      await apiRequest<LoginResponse>(
+        "/auth/login",
+        { method: "POST", body: JSON.stringify({ email, password }) },
+        { skipAuthRedirect: true },
+      );
       // Hard navigation ensures the browser sends fresh cookies on the next
       // request and all server components re-render from scratch.
       window.location.href = "/profile";

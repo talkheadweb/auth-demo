@@ -54,7 +54,11 @@ export async function parseApiResponse<T>(response: Response): Promise<ApiRespon
   };
 }
 
-export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+export async function apiRequest<T>(
+  path: string,
+  init: RequestInit = {},
+  opts: { skipAuthRedirect?: boolean } = {},
+): Promise<T> {
   const response = await fetch(joinUrl(path), {
     ...init,
     cache: "no-store",
@@ -67,8 +71,9 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
   });
 
   // Global 401 handler — session expired or revoked mid-session.
-  // Redirect to login so the user re-authenticates.
-  if (response.status === 401 && typeof window !== "undefined") {
+  // Skipped for auth endpoints (login/register) so they can show the real error
+  // (e.g. "Invalid email or password" or "This account uses Google login").
+  if (response.status === 401 && typeof window !== "undefined" && !opts.skipAuthRedirect) {
     window.location.href = "/login";
     throw new ApiError("Session expired. Redirecting to login.", 401);
   }
