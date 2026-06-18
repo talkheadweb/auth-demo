@@ -40,11 +40,19 @@ async function proxy(req: NextRequest): Promise<NextResponse> {
     redirect: "manual",   // don't follow redirects — pass them through to the browser
   });
 
-  // Copy all upstream response headers (including Set-Cookie) into our response
+  // Copy all upstream response headers (including Set-Cookie) into our response.
+  // Set-Cookie must be handled separately — headers.forEach() joins multiple
+  // Set-Cookie values with a comma into one malformed header. Browsers reject it.
   const responseHeaders = new Headers();
+
+  const setCookies = upstream.headers.getSetCookie?.() ?? [];
+  for (const cookie of setCookies) {
+    responseHeaders.append("set-cookie", cookie);
+  }
+
   upstream.headers.forEach((value, key) => {
-    // next/server strips some headers automatically; skip internal Next.js ones
     if (key.toLowerCase() === "transfer-encoding") return;
+    if (key.toLowerCase() === "set-cookie") return; // handled above
     responseHeaders.append(key, value);
   });
 

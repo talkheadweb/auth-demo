@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import { appConfig } from "@/lib/env";
 import type { ApiSuccessResponse, User } from "@/types/auth";
 
-// Mirror the backend cookie-name logic: _dev suffix in non-production environments.
 const suffix = process.env.NODE_ENV === "production" ? "" : "_dev";
 export const COOKIE_NAMES = {
   accessToken : `access_token${suffix}`,

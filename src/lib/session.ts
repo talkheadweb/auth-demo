@@ -1,8 +1,7 @@
 "use client";
 
-// Cookie name mirrors the backend: _dev suffix outside production.
-const COOKIE_NAME =
-  process.env.NODE_ENV === "production" ? "session_info" : "session_info_dev";
+const _suffix = process.env.NODE_ENV === "production" ? "" : "_dev";
+const COOKIE_NAME = `session_info${_suffix}`;
 
 export type SessionInfo = {
   uid              : string;
